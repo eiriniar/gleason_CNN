@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# for R scripts
+.Rhistory
+
 # Distribution / packaging
 .Python
 env/
