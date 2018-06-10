@@ -399,7 +399,7 @@ class ImageProcessor():
 
 
 def main():
-    prefix  = '/data3/eiriniar/gleason_CNN/dataset_TMA'
+    prefix  = '/data3/eirini/dataset_TMA'
     tma_info_path = os.path.join(prefix, 'tma_info')
     path_xml_annotations = os.path.join(prefix, 'xml_annotations')
     path_pdf_annotations = os.path.join(prefix, 'pdf_annotations')
@@ -425,25 +425,26 @@ def main():
             os.makedirs(path_tma_pdf)
 
         # read in annotated ROIs
-        reader = ROIreader()
-        reader.read_roi_xml(path_tma_xml)
+        # reader = ROIreader()
+        # reader.read_roi_xml(path_tma_xml)
 
         proc = ImageProcessor(path_images, path_Gleason_masks, path_patches, path_tma_pdf)
 
         # overlay Gleason annotations on TMA images
-        proc.draw_pdf_annotations(reader)
+        # proc.draw_pdf_annotations(reader)
 
         # store Gleason annotations as masks
-        proc.create_masks(reader)
+        # proc.create_masks(reader)
 
         # store tissue masks for benign TMA spots
+        '''
         for tma_spot_name in benign_list:
             if tma_spot_name.startswith(tma_prefix):
                 source = os.path.join(prefix, 'tissue_masks', 'mask_%s.png' % tma_spot_name)
                 target = os.path.join(prefix, 'Gleason_masks', 'mask_%s.png' % tma_spot_name)
                 if not os.path.exists(target):
                     subprocess.call('cp %s %s' % (source, target), shell=True)
-
+        '''
         # create patches
         proc.create_annotated_patches(tma_prefix, patch_size=patch_size)
 
@@ -471,21 +472,26 @@ def main():
             os.makedirs(test_mask_dir)
 
         # read in annotated ROIs
-        reader = ROIreader()
-        reader.read_roi_xml(path_tma_xml)
+        # reader = ROIreader()
+        # reader.read_roi_xml(path_tma_xml)
+
         proc = ImageProcessor(path_images, test_mask_dir, path_test_patches, path_tma_pdf)
+
         # overlay Gleason annotations on TMA images
-        proc.draw_pdf_annotations(reader)
+        # proc.draw_pdf_annotations(reader)
 
         # store Gleason annotations as masks
-        proc.create_masks(reader)
+        # proc.create_masks(reader)
+
         # copy benign tissue masks, if a spot has not been annotated
+        '''
         for tma_spot_name in benign_list:
             if tma_spot_name.startswith(tma_prefix):
                 source = os.path.join(prefix, 'tissue_masks', 'mask_%s.png' % tma_spot_name)
                 target = os.path.join(test_mask_dir, 'mask_%s.png' % tma_spot_name)
                 if not os.path.exists(target):
                     subprocess.call('cp %s %s' % (source, target), shell=True)
+        '''
 
     # create joint patches for the test cohort
     joint_proc = ImageProcessor(path_images, test_prefix, path_test_patches, None)

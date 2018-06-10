@@ -55,7 +55,7 @@ def train_network(net='MobileNet_50'):
         os.makedirs(mpath)
 
     # specify the input directory, where image patches live
-    prefix = '/data3/eirini/gleason_CNN/dataset_TMA'
+    prefix = '/data3/eirini/dataset_TMA'
     patch_dir = os.path.join(prefix, 'train_validation_patches_750')
 
 

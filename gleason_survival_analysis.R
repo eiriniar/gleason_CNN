@@ -5,7 +5,7 @@ library(OIsurv)
 library(foreign)
 library(survminer)
 
-input_directory <- '/data3/eiriniar/gleason_CNN/dataset_TMA/results'
+input_directory <- '/data3/eirini/TMA_results/plots'
 choices <- c('st_os_gen', 'st_os_spec', 'rfs_status')
 names <- c('Overall survival', 'Disease-specific survival', 'Recurrence-free survival')
 

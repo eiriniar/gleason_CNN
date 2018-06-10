@@ -46,7 +46,7 @@ def main():
                   255, 0, 0, # Gleason 5 is red
                   255, 255, 255] # ignore class is white
 
-    pref = '/data3/eiriniar/gleason_CNN/dataset_TMA'
+    pref = '/data3/eirini/dataset_TMA'
     image_dir = os.path.join(pref, 'TMA_images')
     mask_dir = os.path.join(pref, 'tissue_masks')
     os.makedirs(mask_dir)

@@ -5,7 +5,7 @@ import glob
 import numpy as np
 import pandas as pd
 
-from utils.keras_utils import w_accuracy, preprocess_input_tf, center_crop
+from utils.keras_utils import preprocess_input_tf, center_crop
 from utils.create_patches import parse_xml, draw_annot
 from gleason_score_finetune import get_filenames_and_classes
 
@@ -199,8 +199,7 @@ def main(prefix):
     model_weights = 'model_weights/MobileNet_gleason_weights.h5'
     patch_model = load_model(model_weights,
                              custom_objects={'relu6': relu6,
-                                             'DepthwiseConv2D': DepthwiseConv2D,
-                                             'w_accuracy':w_accuracy
+                                             'DepthwiseConv2D': DepthwiseConv2D
                                              })
     # provide an output directory
     outdir = 'results'
@@ -259,7 +258,7 @@ def main(prefix):
 
 if __name__ == '__main__':
     # provide the directory where the dataset lives 
-    data_prefix = '/data3/eirini/gleason_CNN/dataset_TMA'
+    data_prefix = '/data3/eirini/dataset_TMA'
     main(data_prefix)
 
 
