@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 
 from utils.keras_utils import preprocess_input_tf, center_crop
-from utils.create_patches import parse_xml, draw_annot
 from gleason_score_finetune import get_filenames_and_classes
 
 import keras.backend as K
@@ -50,6 +49,21 @@ def customize_axis(axis, title):
 def plot_output(filenames, image_dir, annot_dir_1, annot_dir_2, tissue_mask_dir,
                 model, tdim, outdir, n_class=4):
 
+    palette = [0, 255, 0, # benign is green (index 0)
+            0, 0, 255, # Gleason 3 is blue (index 1)
+            255, 255, 0, # Gleason 4 is yellow (index 2)
+            255, 0, 0, # Gleason 5 is red (index 3)
+            255, 255, 255] # ignore class is white (index 4)
+
+    def to_rgb(x):
+        tdim = x.shape[0]
+        a = np.zeros((tdim, tdim, 3), dtype='uint8')
+        for i in range(tdim):
+            for j in range(tdim):
+                k = x[i, j]
+                a[i,j,:] = palette[3*k:3*(k+1)]
+        return a
+
     for fname in filenames:
         print(fname)
         full_imfile = os.path.join(image_dir, fname+'.jpg')
@@ -59,23 +73,15 @@ def plot_output(filenames, image_dir, annot_dir_1, annot_dir_2, tissue_mask_dir,
         X = preprocess_input_tf(X)
         y_pred_prob = model.predict(X[np.newaxis,:,:,:], batch_size=1)[0]
 
-        # get the RGB image for display
-        img2 = image.load_img(full_imfile, grayscale=False)
-        x_rgb = image.img_to_array(img2).astype('uint8')
-        
-        # get the first annotation
-        xml_1 = os.path.join(annot_dir_1, fname+'.xml')
-        if os.path.exists(xml_1):
-            roi_1, roi_labels_1 = parse_xml(xml_1)
-        else:
-            roi_1, roi_labels_1 = [], []
+        # get the first Gleaosn annotation mask
+        mask_1 = os.path.join(annot_dir_1, 'mask1_'+fname+'.png')
+        y1 = pil_image.open(mask_1)
+        y1 = to_rgb(np.array(pil_resize(y1, target_size=(tdim, tdim))))
 
-        # get the second annotation
-        xml_2 = os.path.join(annot_dir_2, fname+'.xml')
-        if os.path.exists(xml_2):
-            roi_2, roi_labels_2 = parse_xml(xml_2)
-        else:
-            roi_2, roi_labels_2 = [], []
+        # get the second Gleaosn annotation mask
+        mask_2 = os.path.join(annot_dir_2, 'mask2_'+fname+'.png')
+        y2 = pil_image.open(mask_2)
+        y2 = to_rgb(np.array(pil_resize(y2, target_size=(tdim, tdim))))
 
         # get the tissue mask
         tissue_maskfile = os.path.join(tissue_mask_dir, 'mask_'+fname+'.png')
@@ -87,9 +93,9 @@ def plot_output(filenames, image_dir, annot_dir_1, annot_dir_2, tissue_mask_dir,
 
         # make the heatmap plots
         fig, ax = plt.subplots(2, 3)
-        draw_annot(ax[0, 2], x_rgb, roi_1, roi_labels_1, lw=3)
+        ax[0, 2].imshow(y1)
         customize_axis(ax[0, 2], 'Pathologist 1')
-        draw_annot(ax[1, 2], x_rgb, roi_2, roi_labels_2, lw=3)
+        ax[1, 2].imshow(y2)
         customize_axis(ax[1, 2], 'Pathologist 2')
         ax[0, 0].imshow(y_pred_prob[:,:,0], cmap=cm.jet, vmin=0, vmax=1)
         customize_axis(ax[0, 0], 'benign')
@@ -125,7 +131,7 @@ def plot_cam(filenames, classes, model, outdir, init_dim=250, tdim=224):
         # prepare for the network
         X = preprocess_input_tf(X)
         y_pred = model.predict(X[np.newaxis,:,:,:], batch_size=1)[0]
-        if y_pred[pred_class] > .8:
+        if y_pred[pred_class] > .9:
             h1, h2 = visualize_class_activation_map(model, X[np.newaxis,:,:,:], pred_class, x_img)
             fig, ax = plt.subplots(1, 3)
             ax[0].imshow(x_img)
@@ -180,11 +186,9 @@ def main(prefix):
     # classes
     class_labels = ['benign', 'gleason3', 'gleason4', 'gleason5']
     n_class = len(class_labels)
-    patch_dir = os.path.join(prefix, 'inter_observer', 'joint_test_patches_750', 'patho_1')
-    mask_dir_1 = os.path.join(prefix, 'inter_observer', 'kim_ZT80_Gleason_masks')
-    mask_dir_2 = os.path.join(prefix, 'inter_observer', 'jan_ZT80_Gleason_masks')
-    annot_dir_1 = os.path.join(prefix, 'xml_annotations', 'kim_ZT80_xml')
-    annot_dir_2 = os.path.join(prefix, 'xml_annotations', 'jan_ZT80_xml')
+    patch_dir = os.path.join(prefix, 'test_patches_750', 'patho_1')
+    mask_dir_1 = os.path.join(prefix, 'Gleason_masks_test', 'Gleason_masks_test_pathologist1')
+    mask_dir_2 = os.path.join(prefix, 'Gleason_masks_test', 'Gleason_masks_test_pathologist2')
     image_dir = os.path.join(prefix, 'TMA_images')
     tissue_mask_dir = os.path.join(prefix, 'tissue_masks')
 
@@ -196,7 +200,7 @@ def main(prefix):
     print('TMA spots in test cohort: %d' % N)
 
     # load the trained patch-level model
-    model_weights = 'model_weights/MobileNet_gleason_weights.h5'
+    model_weights = 'model_weights/MobileNet_Gleason_weights.h5'
     patch_model = load_model(model_weights,
                              custom_objects={'relu6': relu6,
                                              'DepthwiseConv2D': DepthwiseConv2D
@@ -234,7 +238,7 @@ def main(prefix):
         heatmap_dir = os.path.join(outdir, 'heatmaps')
         if not os.path.exists(heatmap_dir):
             os.makedirs(heatmap_dir)
-        plot_output(test_filenames, image_dir, annot_dir_1, annot_dir_2, tissue_mask_dir,
+        plot_output(test_filenames, image_dir, mask_dir_1, mask_dir_2, tissue_mask_dir,
                     model, tdim=big_dim, outdir=heatmap_dir)
 
 

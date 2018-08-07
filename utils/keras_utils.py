@@ -13,13 +13,6 @@ def preprocess_input_tf(x, data_format=None, **kwargs):
 def preprocess_input_caffe(x, data_format=None, **kwargs):
     return preprocess_input(x, data_format, mode='caffe')
 
-def w_accuracy(y_true, y_pred):
-    a = K.sum(K.cast(K.equal(K.argmax(y_true, axis=-1), K.argmax(y_pred, axis=-1)),
-              K.floatx()), axis=-1)
-    b = K.sum(K.cast(K.abs(K.argmax(y_true, axis=-1) - K.argmax(y_pred, axis=-1)),
-              K.floatx()), axis=-1)
-    return a / (a + b)
-
 def center_crop(x, center_crop_size):
     centerh, centerw = x.shape[0] // 2, x.shape[1] // 2
     lh, lw = center_crop_size[0] // 2, center_crop_size[1] // 2
