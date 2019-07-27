@@ -5,12 +5,13 @@ import pickle
 import glob
 import numpy as np
 import pandas as pd
+from shutil import copyfile
 
 # possible neural network architectures
 from keras.applications.vgg16 import VGG16
 from keras.applications.resnet50 import ResNet50
 from keras.applications.inception_v3 import InceptionV3
-from keras.applications.mobilenet import MobileNet, relu6, DepthwiseConv2D
+from keras.applications.mobilenet import MobileNet
 from cnn_finetune.densenet121 import densenet121_model
 from cnn_finetune.custom_layers.scale_layer import Scale
 
@@ -20,20 +21,11 @@ from keras.applications.imagenet_utils import preprocess_input
 # Inception, MobileNet work in [-1, 1] range
 
 # Keras layers and utils
-import keras.backend as K
-from keras.models import Model, load_model
-from keras.layers import Input, Dropout, Flatten, Dense, BatchNormalization, AveragePooling2D
-from keras.layers import Conv2D, GlobalAveragePooling2D, MaxPooling2D, UpSampling2D
-from keras.layers import Activation, Reshape
+from keras.models import Model
+from keras.layers import Dense
 from keras import optimizers
-from keras.regularizers import l2
-from keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau, Callback
+from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
 from utils.keras_utils import balanced_generator
-
-from collections import Counter
-from sklearn.model_selection import StratifiedShuffleSplit
-from sklearn.utils import shuffle
-from sklearn.metrics import accuracy_score, confusion_matrix
 
 
 def get_filenames_and_classes(csv_path):
@@ -58,17 +50,11 @@ def train_network(net='MobileNet_50'):
     prefix = '/data3/eirini/dataset_TMA'
     patch_dir = os.path.join(prefix, 'train_validation_patches_750')
 
-
     init_dim = 250 if net != 'InceptionV3' else 350
     dim = 224 if net != 'InceptionV3' else 299
     target_size = (dim, dim)
     input_shape = (target_size[0], target_size[1], 3)
     bs = 32
-
-    if K.image_data_format() == 'channels_last':
-        bn_axis = 3
-    else:
-        bn_axis = 1
 
     # classes
     class_labels = ['benign', 'gleason3', 'gleason4', 'gleason5']
@@ -88,19 +74,9 @@ def train_network(net='MobileNet_50'):
     csv_path = os.path.join(prefix, 'tma_info', '%s_gleason_scores.csv' % tma)
     val_filenames, val_classes = get_filenames_and_classes(csv_path)
 
-    # test set
-    tma = 'ZT80'
-    csv_path = os.path.join(prefix, 'tma_info', '%s_gleason_scores.csv' % tma)
-    test_filenames, test_classes = get_filenames_and_classes(csv_path)
-
     # total number of TMA spots in training set
     N = len(train_filenames)
     print('Total training TMAs: %d' % N)
-
-    # print('training set:')
-    # print(Counter(np.sum(train_classes, axis=1)))
-    # print('validation set:')
-    # print(Counter(np.sum(val_classes, axis=1)))
 
     # customize the pre-processing
     if net.startswith('MobileNet') or net.startswith('Inception'):
@@ -166,7 +142,7 @@ def train_network(net='MobileNet_50'):
                   loss='categorical_crossentropy', metrics = ['accuracy'])
     history = model.fit_generator(
                 generator=train_batches,
-                steps_per_epoch=200,
+                steps_per_epoch=100,
                 epochs=5,
                 validation_data=valid_batches,
                 validation_steps=100,
@@ -184,16 +160,22 @@ def train_network(net='MobileNet_50'):
 
     history = model.fit_generator(
                 generator=train_batches,
-                steps_per_epoch=200,
+                steps_per_epoch=100,
                 epochs=500,
                 callbacks=[checkpoint, reduce_lr],
                 validation_data=valid_batches,
                 validation_steps=100,
                 verbose=1
     )
+
+    # save the full training history
     with open(os.path.join(mpath, 'history.pkl'), 'wb') as history_f:
         pickle.dump(history.history, history_f, protocol=2)
 
+    # save the best model in terms of validation loss
+    best_epoch_idx = np.argmin(history['val_loss'])
+    best_model_weights = os.path.join(mpath, 'model_{:02d}.h5'.format(best_epoch_idx))
+    copyfile(best_model_weights, os.path.join(mpath, 'best_model_weights.h5'))
 
 
 if __name__ == '__main__':

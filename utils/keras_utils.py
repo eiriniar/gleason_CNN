@@ -211,8 +211,7 @@ def balanced_generator(image_dir, filenames, classes, input_dim, crop_dim, batch
                                                channel_shift_range=20.,
                                                fill_mode='reflect',
                                                horizontal_flip=True,
-                                               vertical_flip=True,
-                                               seed=12345
+                                               vertical_flip=True
                                               )
                     # center crop anyway
                     x= center_crop(img, center_crop_size=(crop_dim, crop_dim))
